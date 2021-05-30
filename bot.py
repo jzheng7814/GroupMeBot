@@ -79,9 +79,15 @@ def help():
 
 client = Client.from_token('XzJ1vmbfp1mkmDRQyGejQMvXrIEI56ndIYY7G6zM')
 group = None
+bot = None
 for g in client.groups.list().autopage():
     if g.name == '#SurvivePreAP':
         group = g
+        break
+
+for b in client.bots():
+    if b.bot_id == '	7304ee8ea1ca2a73edf126a614':
+        bot = b
         break
 
 app = Flask(__name__)
@@ -119,7 +125,7 @@ def home():
     except:
         retstr = 'Internal Server Error'
 
-    group.post(text=retstr)
+    bot.post(text=retstr)
 
     return jsonify(success=True)
 
