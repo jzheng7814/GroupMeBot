@@ -2,8 +2,9 @@ from basketball_reference_scraper.box_scores import get_box_scores
 from basketball_reference_scraper.teams import get_team_stats
 from basketball_reference_scraper.players import get_stats
 from flask import Flask, request, jsonify
+from groupy import Client
 
-def match_result_str(date, team1, team2):
+def match_result(date, team1, team2):
     output_str = 'Match Results:'
 
     d = get_box_scores(date, team1, team2)
@@ -33,7 +34,7 @@ def match_result_str(date, team1, team2):
 
     return output_str
 
-def player_match_stats_str(date, team1, team2, player):
+def player_match_stats(date, team1, team2, player):
     output_str = f'{player} Match Stats:'
 
     d = get_box_scores(date, team1, team2)
@@ -67,12 +68,60 @@ def team_stats(team, season = 2021):
     
     return output_str
 
+def help():
+    return \
+    """My commands are:
+        match_result [date in format YYYY-MM-DD] [Team 1 Abbreviation] [Team 2 Abbreviation]
+        player_match_stats [date in format YYYY-MM-DD] [Team 1 Abbreviation] [Team 2 Abbreviation] [Player Full Name]
+        player_form [Player Full Name]
+        team_stats [Team Abbreviation] [Optional: Season End Year (e.g. 2020-2021 season is 2021)]
+    """
+
+client = Client.from_token('XzJ1vmbfp1mkmDRQyGejQMvXrIEI56ndIYY7G6zM')
+group = None
+for g in client.groups.list().autopage():
+    if g.name == '#SurvivePreAP':
+        group = g
+        break
+
 app = Flask(__name__)
 
-@app.route('/postjson', methods=['POST'])
+@app.route('/', methods=['POST'])
 def home():
-    data = request.json
-    print(jsonify(data))
-    return jsonify(data)
+    global group
 
-app.run(debug=True, port=4096)
+    data = request.json
+    msgtext = data['text']
+    args = msgtext.split()
+    retstr = ''
+
+    if args[0] != '>>>':
+        return jsonify(success=True)
+
+    try:
+        if args[1] == 'match_result':
+            retstr = match_result(args[2], args[3], args[4])
+        elif args[1] == 'player_match_stats':
+            retstr = player_match_stats(args[2], args[3], args[4], args[5])
+        elif args[1] == 'player_form':
+            retstr = player_form(args[2])
+        elif args[1] == 'team_stats':
+            if len(args) == 2:
+                retstr = team_stats(args[2])
+            elif len(args) == 3:
+                retstr = team_stats(args[2], int(args[3]))
+            else:
+                retstr = 'Invalid Arguments'
+        elif args[1] == 'help':
+            retstr = help()
+        else:
+            retstr = 'Invalid Request'
+    except:
+        retstr = 'Internal Server Error'
+
+    group.post(text=retstr)
+
+    return jsonify(success=True)
+
+app.run(host='0.0.0.0', port=80)
+
